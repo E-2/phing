@@ -625,7 +625,7 @@ class IoncubeEncoderTask extends Task
 
         foreach ($this->ionOptionsXS as $name => $value) {
             foreach (explode(' ', $value) as $arg) {
-                $arguments .= "--$name '$arg' ";
+                $arguments .= "--$name \"$arg\" ";
             }
         }
 
