@@ -65,6 +65,12 @@ class GlobMapper implements FileNameMapper
      * @var string $toPostfix
      */
     private $toPostfix = null;
+	
+	/**
+     * Keep filenames that did not match as is
+	 * @var bool $keep
+	 */
+	private $keep = false;
 
     /**
      * {@inheritdoc}
@@ -77,6 +83,9 @@ class GlobMapper implements FileNameMapper
             || !StringHelper::startsWith($this->fromPrefix, $sourceFileName)
             || !StringHelper::endsWith($this->fromPostfix, $sourceFileName)
         ) {
+			if( $this->keep === true ) {
+				return array($sourceFileName);
+			}
             return null;
         }
         $varpart = $this->extractVariablePart($sourceFileName);
@@ -122,6 +131,15 @@ class GlobMapper implements FileNameMapper
             $this->toPostfix = substr($to, $index + 1);
         }
     }
+	
+    /**
+     * Keep filenames that did not match as is
+     * @param bool $keep
+     * @return void
+     */
+	public function setKeep($keep) {
+		$this->keep = (bool) $keep;
+	}
 
     /**
      * Extracts the variable part.

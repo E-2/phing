@@ -43,6 +43,12 @@ class RegexpMapper implements FileNameMapper
      */
     private $reg;
 
+	/**
+     * Keep filenames that did not match as is
+	 * @var bool $keep
+	 */
+	private $keep = false;
+	
     /**
      * Instantiage regexp matcher here.
      */
@@ -80,6 +86,15 @@ class RegexpMapper implements FileNameMapper
     {
         $this->to = $to;
     }
+	
+    /**
+     * Keep filenames that did not match as is
+     * @param bool $keep
+     * @return void
+     */
+	public function setKeep($keep) {
+		$this->keep = (bool) $keep;
+	}
 
     /**
      * {@inheritdoc}
@@ -91,6 +106,9 @@ class RegexpMapper implements FileNameMapper
     public function main($sourceFileName)
     {
         if ($this->reg === null || $this->to === null || !$this->reg->matches((string) $sourceFileName)) {
+			if( $this->keep === true ) {
+				return array($sourceFileName);
+			}
             return null;
         }
 

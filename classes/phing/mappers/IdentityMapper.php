@@ -41,6 +41,15 @@ class IdentityMapper implements FileNameMapper
     {
         return array($sourceFileName);
     }
+    /**
+     * Ignored here.
+     * {@inheritdoc}
+     * @param string $keep
+     * @return void
+     */
+	public function setKeep($keep)
+    {
+    }
 
     /**
      * Ignored here.

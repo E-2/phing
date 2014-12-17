@@ -48,6 +48,7 @@ class Mapper extends DataType
     protected $to;
     protected $classpath;
     protected $classpathId;
+	protected $keep = false;
 
     /**
      * @param Project $project
@@ -153,6 +154,18 @@ class Mapper extends DataType
         }
         $this->to = $to;
     }
+	
+    /**
+     * Set the argument to FileNameMapper.setKeepNonTransformed
+     * @param bool $keep
+     * @return void
+     */
+	public function setKeep($keep) {
+        if ($this->isReference()) {
+            throw $this->tooManyAttributes();
+        }
+		$this->keep = (bool) $keep;
+	}
 
     /**
      * Make this Mapper instance a reference to another Mapper.
@@ -212,6 +225,7 @@ class Mapper extends DataType
         $m = new $cls();
         $m->setFrom($this->from);
         $m->setTo($this->to);
+		$m->setKeep($this->keep);
 
         return $m;
     }
