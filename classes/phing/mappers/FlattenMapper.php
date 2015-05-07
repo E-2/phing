@@ -60,7 +60,17 @@ class FlattenMapper implements FileNameMapper
      * @param string $from
      * @return void
      */
+
     public function setFrom($from)
+    {
+    }
+    /**
+     * Ignored here.
+     * {@inheritdoc}
+     * @param string $keep
+     * @return void
+     */
+    public function setKeep($keep)
     {
     }
 }

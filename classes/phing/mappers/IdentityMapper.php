@@ -47,7 +47,7 @@ class IdentityMapper implements FileNameMapper
      * @param string $keep
      * @return void
      */
-	public function setKeep($keep)
+    public function setKeep($keep)
     {
     }
 
