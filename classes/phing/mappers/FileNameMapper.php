@@ -57,4 +57,13 @@ interface FileNameMapper
      */
     public function setFrom($from);
 
+    /**
+     * Accessor. Sets the keep property. What this mapper should
+     * recognize. The actual implementation is dependent upon the
+     * child class
+     *
+     * @param  string $keep On what this mapper should work
+     * @return void
+     */
+    public function setKeep($from);
 }

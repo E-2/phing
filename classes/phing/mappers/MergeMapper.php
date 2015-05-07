@@ -72,4 +72,12 @@ class MergeMapper implements FileNameMapper
     {
     }
 
+    /**
+     * Ignored.
+     * @param string $keep
+     */
+    public function setKeep($keep)
+    {
+    }
+
 }
