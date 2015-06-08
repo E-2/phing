@@ -64,6 +64,14 @@ class ExportPropertiesTask extends Task
         'env.',
         'user.'
     );
+	
+    /**
+     * Include properties starting with these prefixes
+     *
+     * @var array
+     */
+	private $_allowedPropertyPrefixes = array(
+	);
 
     /**
      * setter for _targetFile
@@ -100,6 +108,20 @@ class ExportPropertiesTask extends Task
 
         return true;
     }
+	
+    /**
+     * setter for _allowedPropertyPrefixes
+     *
+     * @param $prefixes
+     * @internal param string $file
+     * @return bool
+     */
+    public function setAllowedPropertyPrefixes($prefixes)
+    {
+        $this->_allowedPropertyPrefixes = explode(",", $prefixes);
+
+        return true;
+    }
 
     public function main()
     {
@@ -109,9 +131,15 @@ class ExportPropertiesTask extends Task
         if (is_array($this->_properties) && !empty($this->_properties) && null !== $this->_targetFile) {
             $propertiesString = '';
             foreach ($this->_properties as $propertyName => $propertyValue) {
-                if (!$this->isDisallowedPropery($propertyName)) {
-                    $propertiesString .= $propertyName . "=" . $propertyValue . PHP_EOL;
-                }
+				if (!empty($this->_allowedPropertyPrefixes) && $this->isAllowedPropery($propertyName)) {
+					if (count($this->_allowedPropertyPrefixes) == 1) {
+						$propertyName = substr($propertyName, strlen($this->_allowPropertyPrefixes[0]));
+					}
+					$propertiesString .= $propertyName . "=" . $propertyValue . PHP_EOL;
+				}
+				if( empty($this->_allowedPropertyPrefixes) && !$this->isDisallowedPropery($propertyName) ) {
+					$propertiesString .= $propertyName . "=" . $propertyValue . PHP_EOL;
+				}
             }
 
             if (!file_put_contents($this->_targetFile, $propertiesString)) {
@@ -129,6 +157,23 @@ class ExportPropertiesTask extends Task
     protected function isDisallowedPropery($propertyName)
     {
         foreach ($this->_disallowedPropertyPrefixes as $property) {
+            if (substr($propertyName, 0, strlen($property)) == $property) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if a property name is allowed
+     *
+     * @param  string $propertyName
+     * @return bool
+     */
+    protected function isAllowedPropery($propertyName)
+    {
+        foreach ($this->_allowedPropertyPrefixes as $property) {
             if (substr($propertyName, 0, strlen($property)) == $property) {
                 return true;
             }
