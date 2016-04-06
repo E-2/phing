@@ -93,6 +93,22 @@ class DataStore
     }
 
     /**
+     * Remove a value from the data store
+     *
+     * @param string  $key        the key
+     * @param boolean $autocommit whether to auto-commit (write)
+     *                            the data store to disk
+     */
+    public function remove($key, $autocommit = false)
+    {
+        unset($this->data[$key]);
+
+        if ($autocommit) {
+            $this->commit();
+        }
+    }
+
+    /**
      * Commits data store to disk
      *
      * @return none
@@ -112,7 +128,7 @@ class DataStore
     {
         if (!$this->file->canRead()) {
             throw new BuildException("Can't read data store from '" .
-                $file->getPath() . "'");
+                $this->file->getPath() . "'");
         } else {
             $serializedData = $this->file->contents();
 
@@ -130,7 +146,7 @@ class DataStore
     {
         if (!$this->file->canWrite()) {
             throw new BuildException("Can't write data store to '" .
-                $file->getPath() . "'");
+                $this->file->getPath() . "'");
         } else {
             $serializedData = serialize($this->data);
 

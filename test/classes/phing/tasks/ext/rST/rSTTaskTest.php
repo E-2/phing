@@ -25,7 +25,6 @@ require_once 'phing/BuildFileTest.php';
  * @author     Christian Weiske <cweiske@cweiske.de>
  * @license    LGPL v3 or later http://www.gnu.org/licenses/lgpl.html
  * @link       http://www.phing.info/
- * TODO: skip these tests when requirements are not met. (Like when running on windows?)
  */
 class rSTTaskTest extends BuildFileTest
 {
@@ -44,6 +43,15 @@ class rSTTaskTest extends BuildFileTest
     {
         // remove excess file if the test failed
         @unlink(PHING_TEST_BASE . '/etc/tasks/ext/rst/files/single.html');
+    }
+
+    protected function assertPreConditions()
+    {
+        try {
+            $this->testGetToolPathHtmlFormat();
+        } catch (BuildException $be) {
+            $this->markTestSkipped($be->getMessage());
+        }
     }
 
     /**
@@ -70,12 +78,16 @@ class rSTTaskTest extends BuildFileTest
      */
     public function testGetToolPathFail()
     {
-        $rt = new rSTTask();
-        $rt->init();
-        $ref = new ReflectionClass($rt);
-        $method = $ref->getMethod('getToolPath');
-        $method->setAccessible(true);
-        $method->invoke($rt, 'doesnotexist');
+        if (method_exists('ReflectionMethod', 'setAccessible')) {
+            $rt = new rSTTask();
+            $rt->init();
+            $ref = new ReflectionClass($rt);
+            $method = $ref->getMethod('getToolPath');
+            $method->setAccessible(true);
+            $method->invoke($rt, 'doesnotexist');
+        } else {
+            $this->markTestSkipped('No ReflectionMethod::setAccessible available.');
+        }
     }
 
     /**
@@ -84,12 +96,16 @@ class rSTTaskTest extends BuildFileTest
      */
     public function testGetToolPathCustom()
     {
-        $rt = new rSTTask();
-        $rt->setToolpath('true'); //mostly /bin/true on unix
-        $ref = new ReflectionClass($rt);
-        $method = $ref->getMethod('getToolPath');
-        $method->setAccessible(true);
-        $this->assertContains('/true', $method->invoke($rt, 'foo'));
+        if (method_exists('ReflectionMethod', 'setAccessible')) {
+            $rt = new rSTTask();
+            $rt->setToolpath('true'); //mostly /bin/true on unix
+            $ref = new ReflectionClass($rt);
+            $method = $ref->getMethod('getToolPath');
+            $method->setAccessible(true);
+            $this->assertContains('/true', $method->invoke($rt, 'foo'));
+        } else {
+            $this->markTestSkipped('No ReflectionMethod::setAccessible available.');
+        }
     }
 
 
@@ -113,6 +129,18 @@ class rSTTaskTest extends BuildFileTest
         $rt->setToolpath(__FILE__);
     }
 
+    public function testGetToolPathHtmlFormat()
+    {
+        if (method_exists('ReflectionMethod', 'setAccessible')) {
+            $rt = new rSTTask();
+            $ref = new ReflectionClass($rt);
+            $method = $ref->getMethod('getToolPath');
+            $method->setAccessible(true);
+            $this->assertContains('rst2html', $method->invoke($rt, 'html'));
+        } else {
+            $this->markTestSkipped('No ReflectionMethod::setAccessible available.');
+        }
+    }
 
     public function testSingleFileParameterFile()
     {

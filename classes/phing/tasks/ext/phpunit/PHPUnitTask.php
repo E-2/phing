@@ -56,6 +56,7 @@ class PHPUnitTask extends Task
     private $excludeGroups = array();
     private $processIsolation = false;
     private $usecustomerrorhandler = true;
+    private $listeners = array();
 
     /**
      * @var string
@@ -84,7 +85,9 @@ class PHPUnitTask extends Task
          * PEAR old-style, then composer, then PHAR
          */
         @include_once 'PHPUnit/Runner/Version.php';
-        @include_once 'phpunit/Runner/Version.php';
+        if (!class_exists('PHPUnit_Runner_Version')) {
+            @include_once 'phpunit/Runner/Version.php';
+        }
         if (!empty($this->pharLocation)) {
             $GLOBALS['_SERVER']['SCRIPT_NAME'] = '-';
             ob_start();
@@ -287,6 +290,16 @@ class PHPUnitTask extends Task
     }
 
     /**
+     * Add a new listener to all tests of this taks
+     *
+     * @param $listener
+     */
+    private function addListener($listener)
+    {
+        $this->listeners[] = $listener;
+    }
+
+    /**
      * @param PhingFile $configuration
      */
     public function setConfiguration(PhingFile $configuration)
@@ -352,12 +365,38 @@ class PHPUnitTask extends Task
             $this->setProcessIsolation($phpunit['processIsolation']);
         }
 
-        $browsers = $config->getSeleniumBrowserConfiguration();
+        foreach ($config->getListenerConfiguration() as $listener) {
+            if (!class_exists($listener['class'], false) &&
+                $listener['file'] !== '') {
+                require_once $listener['file'];
+            }
 
-        if (!empty($browsers) &&
-            class_exists('PHPUnit_Extensions_SeleniumTestCase')
-        ) {
-            PHPUnit_Extensions_SeleniumTestCase::$browsers = $browsers;
+            if (class_exists($listener['class'])) {
+                if (count($listener['arguments']) == 0) {
+                    $listener = new $listener['class'];
+                } else {
+                    $listenerClass = new ReflectionClass(
+                                       $listener['class']
+                                     );
+                    $listener      = $listenerClass->newInstanceArgs(
+                                       $listener['arguments']
+                                     );
+                }
+
+                if ($listener instanceof PHPUnit_Framework_TestListener) {
+                    $this->addListener($listener);
+                }
+            }
+        }
+
+        if (method_exists($config, 'getSeleniumBrowserConfiguration')) {
+            $browsers = $config->getSeleniumBrowserConfiguration();
+
+            if (!empty($browsers) &&
+                class_exists('PHPUnit_Extensions_SeleniumTestCase')
+            ) {
+                PHPUnit_Extensions_SeleniumTestCase::$browsers = $browsers;
+            }
         }
 
         return $phpunit;
@@ -377,6 +416,12 @@ class PHPUnitTask extends Task
         $this->loadPHPUnit();
 
         $suite = new PHPUnit_Framework_TestSuite('AllTests');
+
+        $autoloadSave = spl_autoload_functions();
+
+        if ($this->bootstrap) {
+            require $this->bootstrap;
+        }
 
         if ($this->configuration) {
             $arguments = $this->handlePHPUnitConfiguration($this->configuration);
@@ -398,12 +443,6 @@ class PHPUnitTask extends Task
             $this->formatters[] = $fe;
         }
 
-        $autoloadSave = spl_autoload_functions();
-
-        if ($this->bootstrap) {
-            require $this->bootstrap;
-        }
-
         foreach ($this->batchtests as $batchTest) {
             $this->appendBatchTestToTestSuite($batchTest, $suite);
         }
@@ -415,12 +454,16 @@ class PHPUnitTask extends Task
         }
 
         $autoloadNew = spl_autoload_functions();
-        foreach ($autoloadNew as $autoload) {
-            spl_autoload_unregister($autoload);
+        if(is_array($autoloadNew)) {
+            foreach ($autoloadNew as $autoload) {
+                spl_autoload_unregister($autoload);
+            }
         }
 
-        foreach ($autoloadSave as $autoload) {
-            spl_autoload_register($autoload);
+        if(is_array($autoloadSave)) {
+            foreach ($autoloadSave as $autoload) {
+                spl_autoload_register($autoload);
+            }
         }
     }
 
@@ -439,11 +482,17 @@ class PHPUnitTask extends Task
             $path = realpath($pwd . '/../../../');
 
             $filter = new PHP_CodeCoverage_Filter();
-            $filter->addDirectoryToBlacklist($path);
+            if (method_exists($filter, 'addDirectoryToBlacklist')) {
+                $filter->addDirectoryToBlacklist($path);
+            }
             $runner->setCodecoverage(new PHP_CodeCoverage(null, $filter));
         }
 
         $runner->setUseCustomErrorHandler($this->usecustomerrorhandler);
+
+        foreach ($this->listeners as $listener) {
+            $runner->addListener($listener);
+        }
 
         foreach ($this->formatters as $fe) {
             $formatter = $fe->getFormatter();

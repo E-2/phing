@@ -34,7 +34,14 @@ The Latest Version
 ------------------
 
   Details of the latest version can be found on the Phing homepage
-  <http://www.phing.info/>.
+  <https://www.phing.info/>.
+
+Supported PHP versions
+----------------------
+
+  We aim to keep Phing 2.x compatible with PHP 5.2 and higher. However,
+  as this is getting increasingly hard to test, we encourage users to
+  upgrade to PHP 5.3 or higher.
 
 Installation
 ------------
@@ -64,7 +71,7 @@ Installation
 
   3. **Phar**
   
-  Download the [Phar archive](http://www.phing.info/get/phing-latest.phar).
+  Download the [Phar archive](https://www.phing.info/get/phing-latest.phar).
   The archive can then be executed by running:
 
          $ php phing-latest.phar
@@ -72,7 +79,7 @@ Installation
 Running the (unit) tests
 ------------------------
 
-  To succesfully run all Phing tests, the following conditions have to be met:
+  To successfully run all Phing tests, the following conditions have to be met:
 
   * PEAR installed, channel "pear.phing.info" discovered
   * Packages "python-docutils" and "subversion" installed
@@ -90,7 +97,7 @@ Documentation
   Documentation is available in various formats in the *docs/docbook5/en/output*
   directory (generated from DocBook sources located in *docs/docbook5/en/source*).
 
-  For online documentation, you can also visit the Phing website: http://www.phing.info/
+  For online documentation, you can also visit the Phing website: https://www.phing.info/
 
 Licensing
 ---------
@@ -103,8 +110,8 @@ Licensing
 Contact
 -------
 
-  * Twitter: [@phingofficial](http://twitter.com/phingofficial)
-  * Website: [http://www.phing.info](http://www.phing.info)
+  * Twitter: [@phingofficial](https://twitter.com/phingofficial)
+  * Website: [https://www.phing.info](https://www.phing.info)
   * IRC:     Freenode, #phing
   * GitHub:  [https://www.github.com/phingofficial/phing](https://www.github.com/phingofficial/phing)
   * E-mail:  [dev-subscribe@phing.tigris.org](mailto:dev-subscribe@phing.tigris.org) (mailing list)

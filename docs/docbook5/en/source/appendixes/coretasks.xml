@@ -211,7 +211,7 @@
         <title>ApplyTask </title>
         <para>Applies a system command on each resource of the specified resource collection.</para>
         <para>When the os attribute is specified, then the command is only executed when run on one of the specified operating systems.</para>
-        <para>The files of a number of Resource Collections – including but not restricted to FileSets or FileLists  – are passed as arguments to the system command.</para>
+        <para>The files of a number of Resource Collections – including but not restricted to FileSets, FileLists or DirSets  – are passed as arguments to the system command.</para>
 
         <table>
             <title>Attributes</title>
@@ -293,7 +293,8 @@
                     <row>
                         <entry><literal>spawn</literal></entry>
                         <entry><literal role="type">Boolean</literal></entry>
-                        <entry>Whether to spawn unix programs to the background, redirecting stdout.</entry>
+                        <entry>Whether to spawn unix programs to the background, redirecting stdout (output will
+                            not be logged by Phing).</entry>
                         <entry><literal>false</literal></entry>
                         <entry>No</entry>
                         <entry></entry>
@@ -352,15 +353,6 @@
                         <entry></entry>
                     </row>
                     <row>
-                        <entry><literal>spawn</literal></entry>
-                        <entry><literal role="type">Boolean</literal></entry>
-                        <entry>Whether the command(s) to be executed are spawned as background process.
-                            If a command is spawned, its output will not be logged by Phing.</entry>
-                        <entry><literal>false</literal></entry>
-                        <entry>No</entry>
-                        <entry></entry>
-                    </row>
-                    <row>
                         <entry><literal>relative</literal></entry>
                         <entry><literal role="type">Boolean</literal></entry>
                         <entry>Whether the filenames should be passed on the command line as relative pathnames
@@ -380,10 +372,10 @@
                     </row>
                     <row>
                         <entry><literal>maxparallel</literal></entry>
-                        <entry><literal role="type">Boolean</literal></entry>
+                        <entry><literal role="type">Integer</literal></entry>
                         <entry>Limit the amount of parallelism by passing at most this many sourcefiles at once.
                             Set it to &lt;= 0 for unlimited.</entry>
-                        <entry><literal>false</literal></entry>
+                        <entry><literal>0</literal></entry>
                         <entry>No</entry>
                         <entry></entry>
                     </row>
@@ -475,15 +467,120 @@
                 </listitem>
                 <listitem><para><literal><link linkend="FileSet">fileset</link></literal></para></listitem>
                 <listitem><para><literal><link linkend="FileList">filelist</link></literal></para></listitem>
+                <listitem><para><literal>dirset</literal></para></listitem>
                 <listitem><para><literal>srcfile</literal></para></listitem>
             </itemizedlist>
         </sect2>
+    </sect1>
+    <sect1 role="taskdef" xml:id="AttribTask">
+    <title>AttribTask</title>
+    <para>Changes the attributes of a file or all files inside specified
+        directories. Right now it has effect only under Windows.
+        Each of the 4 possible permissions has its own attribute,
+        matching the arguments for the attrib command.
+    </para>
+    <para>FileSets or FileLists can be specified using nested <literal>fileset</literal> and <literal>filelist</literal>
+        elements.</para>
+    <para>By default this task won't do anything unless it detects it is running on a Windows system.
+    If you know for sure that you have a "attrib" executable on your PATH that is command line compatible
+    with the Windows command, you can use the task's os attribute and set its value to your current os.
+    </para>
+    <table>
+        <title>Attributes</title>
+        <tgroup cols="5">
+            <colspec colname="name" colnum="1" colwidth="1.5*"/>
+            <colspec colname="type" colnum="2" colwidth="0.8*"/>
+            <colspec colname="description" colnum="3" colwidth="3.5*"/>
+            <colspec colname="default" colnum="4" colwidth="0.8*"/>
+            <colspec colname="required" colnum="5" colwidth="1.2*"/>
+            <thead>
+                <row>
+                    <entry>Name</entry>
+                    <entry>Type</entry>
+                    <entry>Description</entry>
+                    <entry>Default</entry>
+                    <entry>Required</entry>
+                </row>
+            </thead>
+            <tbody>
+                <row>
+                    <entry><literal>file</literal></entry>
+                    <entry><literal role="type">String</literal></entry>
+                    <entry>The file or directory of which the permissions must be changed.</entry>
+                    <entry>n/a</entry>
+                    <entry>Yes</entry>
+                </row>
+                <row>
+                    <entry><literal>readonly</literal></entry>
+                    <entry><literal role="type">Boolean</literal></entry>
+                    <entry>The readonly permission.</entry>
+                    <entry>n/a</entry>
+                    <entry morerows="3" valign="middle">at least one of the four.</entry>
+                </row>
+                <row>
+                    <entry><literal>archive</literal></entry>
+                    <entry><literal role="type">Boolean</literal></entry>
+                    <entry>The archive permission.</entry>
+                    <entry>n/a</entry>
+                </row>
+                <row>
+                    <entry><literal>system</literal></entry>
+                    <entry><literal role="type">Boolean</literal></entry>
+                    <entry>The system permission.</entry>
+                    <entry>n/a</entry>
+                </row>
+                <row>
+                    <entry><literal>hidden</literal></entry>
+                    <entry><literal role="type">Boolean</literal></entry>
+                    <entry>The hidden permission.</entry>
+                    <entry>n/a</entry>
+                </row>
+                <row>
+                    <entry><literal>verbose</literal></entry>
+                    <entry><literal role="type">Boolean</literal></entry>
+                    <entry>Whether to print a summary after execution or not. Defaults to false.</entry>
+                    <entry>false</entry>
+                    <entry>No</entry>
+                </row>
+                <row>
+                    <entry><literal>os</literal></entry>
+                    <entry><literal role="type">String</literal></entry>
+                    <entry>List of Operating Systems on which the command may be executed.</entry>
+                    <entry>n/a</entry>
+                    <entry>No</entry>
+                </row>
+            </tbody>
+        </tgroup>
+    </table>
+    <sect2>
+        <title>Example</title>
+        <programlisting language="xml">&lt;attrib file="${dist}/run.bat" readonly="true" hidden="true"/></programlisting>
+        <para>makes the "run.bat" file read-only and hidden.
+        </para>
+        <programlisting language="xml">&lt;attrib readonly="false">
+    &lt;fileset dir="${meta.inf}" includes="**/*.xml"/>
+&lt;/attrib></programlisting>
+        <para>makes all ".xml" files below ${meta.inf} readable.
+        </para>
+    </sect2>
+
+    <sect2 role="nestedtags">
+        <title>Supported Nested Tags</title>
+        <itemizedlist>
+            <listitem>
+                <para><literal><link linkend="FileList">filelist</link></literal></para>
+            </listitem>
+            <listitem>
+                <para><literal><link linkend="FileSet">fileset</link></literal></para>
+            </listitem>
+        </itemizedlist>
+    </sect2>
     </sect1>
     <sect1 role="taskdef" xml:id="AvailableTask">
         <title>AvailableTask </title>
         <para>Available Task tests if a resource/file is set and sets a certain property to a
             certain value if it exists.</para>
-        <para>Here, <literal>AvailableTask</literal> first checks for the existance of either file
+        <para>Here, <literal>AvailableTask</literal> first checks for the existence of either file
             or directory named <literal>test.txt</literal> in <literal>/tmp</literal>. Then, it
             checks for the directory <literal>foo</literal> in <literal>/home</literal> and then for
             the file or directory <literal>bar</literal> in <literal>/home/foo</literal>. If
@@ -586,6 +683,65 @@
 &lt;available file="/home/foo" type="dir" property="properties.yetanother" />
 
 &lt;available file="/home/foo/bar" property="foo.bar" value="Well, yes" /></programlisting>
+        </sect2>
+
+    </sect1>
+    <sect1 role="taskdef" xml:id="BasenameTask">
+        <title>Basename </title>
+        <para>Task to determine the basename of a specified file, optionally minus a specified suffix. </para>
+        <para>When this task executes, it will set the specified property to the value of the last path element
+            of the specified file. If file is a directory, the basename will be the last directory element.
+            If file is a full-path, relative-path, or simple filename, the basename will be the simple file name,
+            without any directory elements.
+        </para>
+
+        <table>
+            <title>Attributes</title>
+            <tgroup cols="5">
+                <colspec colname="name" colnum="1" colwidth="1.5*"/>
+                <colspec colname="type" colnum="2" colwidth="0.8*"/>
+                <colspec colname="description" colnum="3" colwidth="3.5*"/>
+                <colspec colname="default" colnum="4" colwidth="0.8*"/>
+                <colspec colname="required" colnum="5" colwidth="1.2*"/>
+                <thead>
+                    <row>
+                        <entry>Name</entry>
+                        <entry>Type</entry>
+                        <entry>Description</entry>
+                        <entry>Default</entry>
+                        <entry>Required</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry><literal>property</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>Name of the property that is to be set.</entry>
+                        <entry>n/a</entry>
+                        <entry>Yes</entry>
+                    </row>
+                    <row>
+                        <entry><literal>file</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>The path to take the basename of.</entry>
+                        <entry>n/a</entry>
+                        <entry>Yes</entry>
+                    </row>
+                    <row>
+                        <entry><literal>suffix</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>The suffix to remove from the resulting basename
+                            (specified either with or without the ".").</entry>
+                        <entry>n/a</entry>
+                        <entry>No</entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <sect2>
+            <title>Examples</title>
+            <programlisting language="xml">&lt;basename property="cmdname" file="./foo.exe"
+    suffix=".exe"/></programlisting>
         </sect2>
 
     </sect1>
@@ -744,7 +900,8 @@
             <programlisting language="xml">&lt;chown file="my-file.txt" user="foo" />
 &lt;chown file="my-file.txt" user="username.groupname" />
 &lt;chown file="/home/test/my-directory" user="bar" />
-&lt;chown file="/home/test/my-file.txt" user="foo" verbose="true" failonerror="false" /></programlisting>
+&lt;chown file="/home/test/my-file.txt" user="foo"
+verbose="true" failonerror="false" /></programlisting>
         </sect2>
         <sect2 role="nestedtags">
             <title>Supported Nested Tags</title>
@@ -825,7 +982,7 @@
         <title>CopyTask </title>
         <para>Copies files or directories. Files are only copied if the source file is newer than
             the destination file, or when the destination file does not exist. It is possible to
-            explictly overwrite existing files.</para>
+            explicitly overwrite existing files.</para>
         <para><literal>CopyTask</literal> does not allow self copying, i.e. copying a file to the
             same name for security reasons.</para>
         <table>
@@ -925,7 +1082,7 @@
             </tgroup>
         </table>
         <note>
-            <para>No automatic exapnsion of symbolic links</para>
+            <para>No automatic expansion of symbolic links</para>
             <para>By default, <literal>CopyTask</literal> does not expand / dereference symbolic
                 links, and will simply copy the link itself. To enable dereferencing, set
                     <literal>expandsymboliclinks</literal> to <literal>true</literal> in the
@@ -1280,6 +1437,71 @@
             </itemizedlist>
         </sect2>
     </sect1>
+    <sect1 role="taskdef" xml:id="DiagnosticsTask">
+        <title>Diagnostics</title>
+        <para> Runs phing's -diagnostics code inside phing itself.
+            This is good for debugging phing's configuration under an IDE.
+        </para>
+        <sect2>
+            <title>Example</title>
+            <programlisting language="xml">&lt;target name="diagnostics" description="diagnostics">
+                &lt;diagnostics/>
+                &lt;/target></programlisting>
+        </sect2>
+    </sect1>
+    <sect1 role="taskdef" xml:id="DirnameTask">
+        <title>Dirname</title>
+        <para> Task to determine the directory path of a specified file.
+        </para>
+        <para> When this task executes, it will set the specified property to the value of the specified file
+            (or directory) up to, but not including, the last path element. If the specified file is a path that
+            ends in a filename, the filename will be dropped. If the specified file is just a filename, the
+            directory will be the current directory.
+        </para>
+        <para> Note: This is not the same as the UNIX dirname command, which is defined as "strip non-directory suffix
+            from filename". &lt;dirname> determines the full directory path of the specified file.
+        </para>
+        <table>
+            <title>Attributes</title>
+            <tgroup cols="5">
+                <colspec colname="name" colnum="1" colwidth="1.5*"/>
+                <colspec colname="type" colnum="2" colwidth="0.8*"/>
+                <colspec colname="description" colnum="3" colwidth="3.5*"/>
+                <colspec colname="default" colnum="4" colwidth="0.8*"/>
+                <colspec colname="required" colnum="5" colwidth="1.2*"/>
+                <thead>
+                    <row>
+                        <entry>Name</entry>
+                        <entry>Type</entry>
+                        <entry>Description</entry>
+                        <entry>Default</entry>
+                        <entry>Required</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry><literal>file</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>The path to take the dirname of.</entry>
+                        <entry>n/a</entry>
+                        <entry>yes</entry>
+                    </row>
+                    <row>
+                        <entry><literal>property</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>The name of the property to set.</entry>
+                        <entry>n/a</entry>
+                        <entry>yes</entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <sect2>
+            <title>Example</title>
+            <programlisting language="xml">&lt;dirname property="foo.dirname" file="foo.txt"/></programlisting>
+            <para>will set <literal>foo.dirname</literal> to the project's basedir.</para>
+        </sect2>
+    </sect1>
     <sect1 role="taskdef" xml:id="EchoTask">
         <title>EchoTask </title>
         <para>Echoes a message to the current loggers and listeners which means standard out unless
@@ -1367,6 +1589,100 @@
             </itemizedlist>
         </sect2>
     </sect1>
+    <sect1 role="taskdef" xml:id="EchoPropertiesTask">
+        <title>EchoPropertiesTask </title>
+        <para> Displays all the current properties in the project.
+            The output can be sent to a file if desired.
+            This task can be used as a somewhat contrived means of returning data from an <literal>&lt;phing></literal>
+            invocation, but is really for debugging build files.
+        </para>
+        <table>
+            <title>Attributes</title>
+            <tgroup cols="5">
+                <colspec colname="name" colnum="1" colwidth="1.5*"/>
+                <colspec colname="type" colnum="2" colwidth="0.8*"/>
+                <colspec colname="description" colnum="3" colwidth="3.5*"/>
+                <colspec colname="default" colnum="4" colwidth="0.8*"/>
+                <colspec colname="required" colnum="5" colwidth="1.2*"/>
+                <thead>
+                    <row>
+                        <entry>Name</entry>
+                        <entry>Type</entry>
+                        <entry>Description</entry>
+                        <entry>Default</entry>
+                        <entry>Required</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry><literal>destfile</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>If specified, the value indicates the name of the file to send the output of the statement to.
+                            If not specified, then the output will go to the Phing log.</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>srcfile</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>If specified, the value indicates the name of the property file to read from.
+                            If not specified, then the system properties will be taken.</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>prefix</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>a prefix which is used to filter the properties only those properties starting
+                            with this prefix will be echoed.</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>regex</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>a regular expression which is used to filter the properties only those properties
+                            whose names match it will be echoed.</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>failonerror</literal></entry>
+                        <entry><literal role="type">Boolean</literal></entry>
+                        <entry>By default, the "failonerror" attribute is enabled.
+                            If an error occurs while writing the properties to a file, and this attribute is enabled,
+                            then a BuildException will be thrown, causing the build to fail.
+                            If disabled, then IO errors will be reported as a log statement, and the build will
+                            continue without failure from this task.</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>format</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>One of text or xml. Determines the output format. Defaults to text.</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <sect2>
+            <title>Example</title>
+            <programlisting language="xml">&lt;echoproperties /></programlisting>
+            <para>Report the current properties to the log.</para>
+            <programlisting language="xml">&lt;echoproperties destfile="my.properties"/></programlisting>
+            <para>Report the current properties to the file "my.properties", and will fail the build if the file could
+                not be created or written to.</para>
+            <programlisting language="xml">&lt;echoproperties destfile="my.properties" failonerror="false"/></programlisting>
+            <para>Report the current properties to the file "my.properties", and will log a message if the file
+                could not be created or written to, but will still allow the build to continue.</para>
+            <programlisting language="xml">&lt;echoproperties prefix="phing."/></programlisting>
+            <para>List all properties beginning with "phing."</para>
+            <programlisting language="xml">&lt;echoproperties regex="/.*phing.*/"/></programlisting>
+            <para>Lists all properties that contain "phing" in their names.</para>
+        </sect2>
+    </sect1>
     <sect1 role="taskdef" xml:id="ExecTask">
         <title>ExecTask </title>
         <para>Executes a shell command. You can use this to quickly add a new command to Phing.
@@ -1439,7 +1755,7 @@
                         <entry><literal role="type">Boolean</literal></entry>
                         <entry>By default, we escape shell metacharacters before executing. Setting
                             this to false will disable this precaution.</entry>
-                        <entry><literal>true</literal></entry>
+                        <entry><literal>false</literal></entry>
                         <entry>No</entry>
                     </row>
                     <row>
@@ -1627,6 +1943,14 @@
                         <entry>n/a</entry>
                         <entry>No</entry>
                     </row>
+                    <row>
+                        <entry><literal>status</literal></entry>
+                        <entry><literal role="type">Integer</literal></entry>
+                        <entry>Exit using the specified status code; assuming the generated Exception is not caught,
+                            PHP will exit with this status.</entry>
+                        <entry>n/a</entry>
+                        <entry>No</entry>
+                    </row>
                 </tbody>
             </tgroup>
         </table>
@@ -1639,7 +1963,23 @@
 &lt;fail if="errorprop" message="Detected error!" />
 
 &lt;!-- Exit unless ${dontfail} prop is defined. -->
-&lt;fail unless="dontfail" message="Detected error!" /></programlisting>
+&lt;fail unless="dontfail" message="Detected error!" />
+
+&lt;!-- Using a condition to achieve the same effect:
+&lt;fail message="Detected error!">
+    &lt;condition>
+        &lt;not>
+            &lt;isset property="dontfail"/>
+        &lt;/not>
+    &lt;/condition>
+&lt;/fail></programlisting>
+        </sect2>
+        <sect2 role="nestedtags">
+            <title>Parameters specified as nested elements.</title>
+            <para>As an alternative to the <literal>if/unless</literal> attributes, conditional failure can be achieved
+                using a single nested <literal>&lt;condition></literal> element,
+                which should contain exactly one core or custom condition.
+            </para>
         </sect2>
     </sect1>
 
@@ -1903,6 +2243,15 @@
             <title>Examples</title>
             <programlisting language="xml">&lt;import file="path/to/build.xml"/>
 &lt;import file="path/to/build.xml" optional="true"/></programlisting>
+            <para>Additionally, <literal>ImportTask</literal> supports Filesets, i.e. you can easily
+                include/exclude one or more files. For more information, see <xref
+                    xlink:href="#app.coretypes"/>.</para>
+            <programlisting language="xml">&lt;import" >
+  &lt;fileset dir=".">
+    &lt;include name="path/to/build.xml" />
+  &lt;/fileset>
+  &lt;filelist dir="." files="path/to/build.xml"/>
+&lt;/import></programlisting>
         </sect2>
     </sect1>
     <sect1 role="taskdef" xml:id="IncludePathTask">
@@ -2259,7 +2608,7 @@
         <sect2>
             <title>Examples</title>
             <programlisting language="xml">&lt;!-- Call target "xslttest" from buildfile "alternativebuildfile.xml" -->
- &lt;phing phingfile="alternativebuild.xml" inheritRefs="true" target="xslttest" />
+&lt;phing phingfile="alternativebuild.xml" inheritRefs="true" target="xslttest" />
 
 &lt;!-- Do a more complex call -->
 &lt;phing phingfile="somebuild.xml" target="sometarget">
@@ -2277,7 +2626,7 @@
         </sect2>
         <sect2>
             <title>Base directory of the new project</title>
-            <para>The base directory of the new project is set dependant on the <literal>dir</literal> and
+            <para>The base directory of the new project is set dependent on the <literal>dir</literal> and
                 the <literal>inheritAll</literal> attribute. This is important to keep in mind or
                 else you might run into bugs in your<filename> build.xml</filename>'s. The following
                 table shows when which value is used:</para>
@@ -2416,6 +2765,64 @@
                     <para><literal>param</literal> (alias for property)</para>
                 </listitem>
             </itemizedlist>
+        </sect2>
+    </sect1>
+    <sect1 role="taskdef" xml:id="Phingversion">
+        <title>Phingversion</title>
+        <para> Stores the Phing version (when used as task) or checks for a specific Phing version
+            (when used as condition).
+        </para>
+        <table>
+            <title>Attributes</title>
+            <tgroup cols="5">
+                <colspec colname="name" colnum="1" colwidth="1.5*"/>
+                <colspec colname="type" colnum="2" colwidth="0.8*"/>
+                <colspec colname="description" colnum="3" colwidth="3.5*"/>
+                <colspec colname="requiredtask" colnum="4" colwidth="1.0*"/>
+                <colspec colname="requiredcond" colnum="5" colwidth="1.0*"/>
+                <thead>
+                    <row>
+                        <entry>Name</entry>
+                        <entry>Type</entry>
+                        <entry>Description</entry>
+                        <entry>Required (Task)</entry>
+                        <entry>Required (Condition)</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry><literal>atleast</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>The version that this at least. The format is <literal>major.minor.point</literal>.</entry>
+                        <entry>No</entry>
+                        <entry morerows="1" valign="middle"><para>One of these.</para></entry>
+                    </row>
+                    <row>
+                        <entry><literal>exactly</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>The version that this phing is exactly. The format is <literal>major.minor.point</literal>.</entry>
+                        <entry>No</entry>
+                    </row>
+                    <row>
+                        <entry><literal>property</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>The name of the property to set.</entry>
+                        <entry>Yes</entry>
+                        <entry>No (ignored)</entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <sect2>
+            <title>Example</title>
+            <programlisting language="xml">&lt;phingversion property="phingversion"/></programlisting>
+            <para>Stores the current Phing version in the property <literal>phingversion</literal>.</para>
+            <programlisting language="xml">&lt;phingversion property="phingversion" atleast="2.9"/></programlisting>
+            <para>Stores the Phing version in the property <literal>phingversion</literal>
+                if the current Phing version is 2.9.0 or higher. Otherwise the property remains unset.</para>
+            <programlisting language="xml">&lt;phingversion property="phing-is-exact-292" exactly="2.9.2"/></programlisting>
+            <para>Sets the property <literal>phing-is-exact-292</literal> if Phing 2.9.2 is running. Neither 2.8.2 nor 2.9.1
+                would match.</para>
         </sect2>
     </sect1>
     <sect1 role="taskdef" xml:id="PhpEvalTask">
@@ -2710,6 +3117,103 @@
 &lt;echo>${someprop}&lt;/echo></programlisting>
         </sect2>
     </sect1>
+    <sect1 role="taskdef" xml:id="RecordTask">
+        <title>Record</title>
+        <para> A recorder is a listener to the current build process that records the output to a file.
+        </para>
+        <para>
+            Several recorders can exist at the same time. Each recorder is associated with a file.
+            The filename is used as a unique identifier for the recorders. The first call to the recorder task with
+            an unused filename will create a recorder (using the parameters provided) and add it to the listeners
+            of the build. All subsequent calls to the recorder task using this filename will modify that recorders state
+            (recording or not) or other properties (like logging level).
+        </para>
+        <para>
+            Some technical issues: the file's output stream is flushed for "finished" events
+            (buildFinished, targetFinished and taskFinished), and is closed on a buildFinished event.
+        </para>
+        <table>
+            <title>Attributes</title>
+            <tgroup cols="5">
+                <colspec colname="name" colnum="1" colwidth="1.5*"/>
+                <colspec colname="type" colnum="2" colwidth="0.8*"/>
+                <colspec colname="description" colnum="3" colwidth="3.5*"/>
+                <colspec colname="default" colnum="4" colwidth="0.8*"/>
+                <colspec colname="required" colnum="5" colwidth="1.2*"/>
+                <thead>
+                    <row>
+                        <entry>Name</entry>
+                        <entry>Type</entry>
+                        <entry>Description</entry>
+                        <entry>Default</entry>
+                        <entry>Required</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry><literal>name</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>The name of the file this logger is associated with.</entry>
+                        <entry>n/a</entry>
+                        <entry>yes</entry>
+                    </row>
+                    <row>
+                        <entry><literal>action</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>This tells the logger what to do: should it start recording or stop?
+                            The first time that the recorder task is called for this logfile, and if this attribute is not
+                            provided, then the default for this attribute is "start".
+                            If this attribute is not provided on subsequent calls, then the state remains as previous.
+                            [Values = {start|stop}, Default = no state change]</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>append</literal></entry>
+                        <entry><literal role="type">Boolean</literal></entry>
+                        <entry>Should the recorder append to a file, or create a new one? This is only applicable the first
+                            time this task is called for this file. [Values = {yes|no}, Default=no]</entry>
+                        <entry><literal>no</literal></entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>emacsmode</literal></entry>
+                        <entry><literal role="type">Boolean</literal></entry>
+                        <entry>Removes [task] banners like Phings's -emacs command line switch
+                            if set to <literal>true</literal>.</entry>
+                        <entry><literal>false</literal></entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>loglevel</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>At what logging level should this recorder instance record to? This is not a once only
+                            parameter (like append is) -- you can increase or decrease the logging level as the build
+                            process continues. [Values= {error|warn|info|verbose|debug}, Default = no change]</entry>
+                        <entry><literal>false</literal></entry>
+                        <entry>no</entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <sect2>
+            <title>Example</title>
+            <para>The following build.xml snippet is an example of how to use the recorder to record just the
+                <literal>&lt;echo></literal> task:</para>
+            <programlisting language="xml">...
+                &lt;record name="log.txt" action="start"/>
+                &lt;echo ...
+                &lt;record name="log.txt" action="stop"/>
+                ...</programlisting>
+            <para>The following two calls to <literal>&lt;record></literal> set up two recorders:
+                one to file "records-simple.log" at logging level info (the default) and one to file
+                "ISO.log" using logging level of verbose.</para>
+            <programlisting language="xml">...
+                &lt;record name="records-simple.log"/>
+                &lt;record name="ISO.log" loglevel="verbose"/>
+                ...</programlisting>
+        </sect2>
+    </sect1>
     <sect1 role="taskdef" xml:id="ReflexiveTask">
         <title>ReflexiveTask </title>
         <para>The <literal>ReflexiveTask</literal> performs operations on files. It is essentially a
@@ -2841,10 +3345,63 @@
 &lt;echo>Resolved [absolute] path: ${absolute_path}&lt;/echo></programlisting>
         </sect2>
     </sect1>
-    <sect1 role="taskdef" xml:id="SwitchPathTask">
+    <sect1 role="taskdef" xml:id="RetryTask">
+        <title>Retry</title>
+        <para> Retry is a container which executes a single nested task until
+            either: there is no failure; or: its retrycount has been exceeded.
+            If this happens a BuildException is thrown..
+        </para>
+        <table>
+            <title>Attributes</title>
+            <tgroup cols="5">
+                <colspec colname="name" colnum="1" colwidth="1.5*"/>
+                <colspec colname="type" colnum="2" colwidth="0.8*"/>
+                <colspec colname="description" colnum="3" colwidth="3.5*"/>
+                <colspec colname="default" colnum="4" colwidth="0.8*"/>
+                <colspec colname="required" colnum="5" colwidth="1.2*"/>
+                <thead>
+                    <row>
+                        <entry>Name</entry>
+                        <entry>Type</entry>
+                        <entry>Description</entry>
+                        <entry>Default</entry>
+                        <entry>Required</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry><literal>retrycount</literal></entry>
+                        <entry><literal role="type">Integer</literal></entry>
+                        <entry>number of times to attempt to execute the nested task
+                        </entry>
+                        <entry>1</entry>
+                        <entry>Yes</entry>
+                    </row>
+                    <row>
+                        <entry><literal>retrydelay</literal></entry>
+                        <entry><literal role="type">Integer</literal></entry>
+                        <entry>number of seconds to wait between retry attempts task.
+                        </entry>
+                        <entry>0</entry>
+                        <entry>No, defaults to no delay</entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <para>Any valid Phing task may be embedded within the retry task.</para>
+        <sect2>
+            <title>Example</title>
+            <programlisting language="xml">&lt;retry retrycount="3">
+       &lt;httpget url="http://www.unreliable-server.com/unreliable.tar.gz" dir="/home/retry"/>
+&lt;/retry></programlisting>
+            <para>This example shows how to use <literal>&lt;retry></literal> to
+                wrap a task which must interact with an unreliable network resource.
+            </para>
+        </sect2>
+    </sect1>
+    <sect1 role="taskdef" xml:id="SwitchTask">
         <title>SwitchTask </title>
         <para>Task definition for the phing task to switch on a particular value.</para>
-
 
         <table>
             <title>Attributes</title>
@@ -2883,19 +3440,12 @@
         </table>
         <sect2 role="nestedtags">
             <title>Supported Nested Tags</title>
-            <itemizedlist>
-                <listitem>
-                    <para>At least one <literal>&lt;case></literal> or <literal>&lt;default></literal> is required.</para>
-                </listitem>
-            </itemizedlist>
+            <para>At least one <literal>&lt;case></literal> or <literal>&lt;default></literal> is required.</para>
 
-            <title>case</title>
-            <itemizedlist>
-                <listitem>
-                    <para>An individual case to consider, if the value that is being switched on matches to value attribute
-                        of the case, then the nested tasks will be executed.</para>
-                </listitem>
-            </itemizedlist>
+            <para><literal>case</literal></para>
+
+            <para>An individual case to consider, if the value that is being switched on matches to value attribute
+                of the case, then the nested tasks will be executed.</para>
 
             <table>
                 <title>Attributes</title>
@@ -2926,13 +3476,9 @@
                 </tgroup>
             </table>
 
-            <title>default</title>
-            <itemizedlist>
-                <listitem>
-                    <para>The default case for when no match is found. Must not appear more than once per task.</para>
-                </listitem>
-            </itemizedlist>
+            <para><literal>default</literal></para>
 
+            <para>The default case for when no match is found. Must not appear more than once per task.</para>
         </sect2>
         <sect2>
             <title>Examples</title>
@@ -3044,6 +3590,86 @@ file defines a task in the format: name=path.to.Task -->
                     <para><literal><link linkend="path">classpath</link></literal></para>
                 </listitem>
             </itemizedlist>
+        </sect2>
+    </sect1>
+    <sect1 role="taskdef" xml:id="TempFileTask">
+        <title>Tempfile Task</title>
+        <para> This task sets a property to the name of a temporary file. Unlike PhingFile::createTempFile(),
+            this task does not actually create the temporary file, but it does guarantee that the file did not
+            exist when the task was executed.
+        </para>
+        <table>
+            <title>Attributes</title>
+            <tgroup cols="5">
+                <colspec colname="name" colnum="1" colwidth="1.5*"/>
+                <colspec colname="type" colnum="2" colwidth="0.8*"/>
+                <colspec colname="description" colnum="3" colwidth="3.5*"/>
+                <colspec colname="default" colnum="4" colwidth="0.8*"/>
+                <colspec colname="required" colnum="5" colwidth="1.2*"/>
+                <thead>
+                    <row>
+                        <entry>Name</entry>
+                        <entry>Type</entry>
+                        <entry>Description</entry>
+                        <entry>Default</entry>
+                        <entry>Required</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry><literal>property</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>Sets the property you wish to assign the temporary file to.</entry>
+                        <entry>n/a</entry>
+                        <entry>yes</entry>
+                    </row>
+                    <row>
+                        <entry><literal>destdir</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>Sets the destination directory. If not set, the basedir directory is used instead.</entry>
+                        <entry>basedir</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>prefix</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>Sets the optional prefix string for the temp file.</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>suffix</literal></entry>
+                        <entry><literal role="type">String</literal></entry>
+                        <entry>Sets the optional suffix string for the temp file.</entry>
+                        <entry>n/a</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>deleteonexit</literal></entry>
+                        <entry><literal role="type">Boolean</literal></entry>
+                        <entry>Whether the temp file will be marked for deletion on normal exit
+                            (even though the file may never be created).</entry>
+                        <entry>false</entry>
+                        <entry>no</entry>
+                    </row>
+                    <row>
+                        <entry><literal>createfile</literal></entry>
+                        <entry><literal role="type">Boolean</literal></entry>
+                        <entry>Whether the temp file should be created by this task.</entry>
+                        <entry>false</entry>
+                        <entry>no</entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <sect2>
+            <title>Example</title>
+            <programlisting language="xml">&lt;tempfile property="temp.file"/></programlisting>
+            <para>create a temporary file</para>
+            <programlisting language="xml">&lt;tempfile property="temp.file" suffix=".xml"/></programlisting>
+            <para>create a temporary file with the .xml suffix</para>
+            <programlisting language="xml">&lt;tempfile property="temp.file" destDir="build"/></programlisting>
+            <para>create a temporary file in the <literal>build</literal> subdirectory</para>
         </sect2>
     </sect1>
     <sect1 role="taskdef" xml:id="TouchTask">
@@ -3432,7 +4058,8 @@ Includes the Type named "CustomProject" and makes it available by
         </table>
         <sect2>
             <title>Examples</title>
-            <programlisting language="xml">&lt;uptodate property="propelBuild.notRequired" targetfile="${deploy}/propelClasses.tgz" >
+            <programlisting language="xml">&lt;uptodate property="propelBuild.notRequired"
+  targetfile="${deploy}/propelClasses.tgz">
   &lt;fileset dir="${src}/propel">
     &lt;include="**/*.php"/>
   &lt;/fileset>
@@ -3501,7 +4128,7 @@ Includes the Type named "CustomProject" and makes it available by
                         <entry>Yes</entry>
                     </row>
                     <row>
-                        <entry><literal>WaitUnit</literal></entry>
+                        <entry><literal>MaxWaitUnit</literal></entry>
                         <entry><literal>String</literal></entry>
                         <entry>Set the max wait time unit. Must be one of
                                 "<literal>week</literal>","<literal>day</literal>", "<literal>hour</literal>",

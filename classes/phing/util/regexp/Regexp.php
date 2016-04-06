@@ -56,16 +56,12 @@ class Regexp
      * Constructor sets the regex engine to use (preg by default).
      * @param string $engineType
      * @throws BuildException
-     * @internal param string $_engineType The regex engine to use.
      */
     public function __construct($engineType = 'preg')
     {
         if ($engineType == 'preg') {
             include_once 'phing/util/regexp/PregEngine.php';
             $this->engine = new PregEngine();
-        } elseif ($engineType == 'ereg') {
-            include_once 'phing/util/regexp/EregEngine.php';
-            $this->engine = new EregEngine();
         } else {
             throw new BuildException("Invalid engine type for Regexp: " . $engineType);
         }
@@ -220,5 +216,14 @@ class Regexp
     public function getMultiline()
     {
         return $this->engine->getMultiline();
+    }
+
+    /**
+     * Sets the maximum possible replacements for each pattern.
+     * @param int $limit
+     */
+    public function setLimit($limit)
+    {
+        $this->engine->setLimit($limit);
     }
 }

@@ -287,6 +287,15 @@ class PhingFile
         return ($this->prefixLength !== 0);
     }
 
+    /**
+     * Returns the file extension for a given file. For example test.php would be returned as php.
+     *
+     * @return string The name of the extension.
+     */
+    public function getFileExtension()
+    {
+        return pathinfo((string) $this->getAbsolutePath(), PATHINFO_EXTENSION);
+    }
 
     /**
      * Returns the absolute pathname string of this abstract pathname.
@@ -318,7 +327,7 @@ class PhingFile
      * Returns the absolute form of this abstract pathname.  Equivalent to
      * getAbsolutePath.
      *
-     * @return string The absolute abstract pathname denoting the same file or
+     * @return PhingFile The absolute abstract pathname denoting the same file or
      *                directory as this abstract pathname
      */
     public function getAbsoluteFile()
@@ -553,7 +562,7 @@ class PhingFile
             throw new IOException("No read access to " . $this->path);
         }
 
-        return (($fs->getBooleanAttributes($this) & $fs->BA_HIDDEN) !== 0);
+        return (($fs->getBooleanAttributes($this) & FileSystem::BA_HIDDEN) !== 0);
     }
 
     /**
@@ -591,7 +600,7 @@ class PhingFile
      *
      * @throws IOException
      * @return int An integer value representing the time the file was
-     *             last modified, measured in milliseconds since the epoch
+     *             last modified, measured in seconds since the epoch
      *             (00:00:00 GMT, January 1, 1970), or 0 if the
      *             file does not exist or if an I/O error occurs
      */

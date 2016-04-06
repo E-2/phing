@@ -90,6 +90,23 @@ class PHPMDTask extends Task
     protected $formatters = array();
 
     /**
+     * @var bool
+     */
+    protected $newVersion = true;
+
+    /**
+     * @var string
+     */
+    protected $pharLocation = "";
+
+    /**
+     * Cache data storage
+     *
+     * @var DataStore
+     */
+    protected $cache;
+
+    /**
      * Set the input source file or directory.
      *
      * @param PhingFile $file The input source file or directory.
@@ -187,37 +204,54 @@ class PHPMDTask extends Task
     }
 
     /**
-     * Executes PHPMD against PhingFile or a FileSet
-     *
-     * @throws BuildException - if the phpmd classes can't be loaded.
+     * @param string $pharLocation
      */
-    public function main()
+    public function setPharLocation($pharLocation)
     {
-        /**
-         * Find PHPMD
-         */
-        if (false === stream_resolve_include_path("PHP/PMD.php")) {
-            @include_once 'PHPMD/PHPMD.php';
-            $class_name = '\PHPMD\PHPMD';
-            $new = true;
-        } else {
-            @include_once 'PHP/PMD.php';
-            $class_name = "PHP_PMD";
-            $new = false;
+        $this->pharLocation = $pharLocation;
+    }
+
+    /**
+     * Whether to store last-modified times in cache
+     *
+     * @param PhingFile $file
+     */
+    public function setCacheFile(PhingFile $file)
+    {
+        $this->cache = new DataStore($file);
+    }
+
+    /**
+     * Find PHPMD
+     *
+     * @return string
+     * @throws BuildException
+     */
+    protected function loadDependencies()
+    {
+        if (!empty($this->pharLocation)) {
+            include_once 'phar://' . $this->pharLocation . '/vendor/autoload.php';
         }
 
+        $className = '\PHPMD\PHPMD';
 
-        if (!class_exists($class_name)) {
+        if (!class_exists($className)) {
+            @include_once 'PHP/PMD.php';
+            $className = "PHP_PMD";
+            $this->newVersion = false;
+        }
+
+        if (!class_exists($className)) {
             throw new BuildException(
-                'PHPMDTask depends on PHPMD being installed and on include_path.',
+                'PHPMDTask depends on PHPMD being installed and on include_path or listed in pharLocation.',
                 $this->getLocation()
             );
         }
 
-        if ($new) {
-            require_once 'PHPMD/AbstractRule.php';
-            //weird syntax to allow 5.2 parser compatability
+        if ($this->newVersion) {
+            //weird syntax to allow 5.2 parser compatibility
             $minPriority = constant('\PHPMD\AbstractRule::LOWEST_PRIORITY');
+            require_once 'phing/tasks/ext/phpmd/PHPMDRendererRemoveFromCache.php';
         } else {
             require_once 'PHP/PMD/AbstractRule.php';
             $minPriority = PHP_PMD_AbstractRule::LOWEST_PRIORITY;
@@ -226,6 +260,51 @@ class PHPMDTask extends Task
         if (!$this->minimumPriority) {
             $this->minimumPriority = $minPriority;
         }
+
+        return $className;
+    }
+
+    /**
+     * Return the list of files to parse
+     *
+     * @return string[] list of absolute files to parse
+     */
+    protected function getFilesToParse()
+    {
+        $filesToParse = array();
+
+        if ($this->file instanceof PhingFile) {
+            $filesToParse[] = $this->file->getPath();
+        } else {
+            // append any files in filesets
+            foreach ($this->filesets as $fs) {
+                $dir = $fs->getDir($this->project)->getAbsolutePath();
+                foreach ($fs->getDirectoryScanner($this->project)->getIncludedFiles() as $filename) {
+                    $fileAbsolutePath = $dir . DIRECTORY_SEPARATOR . $filename;
+                    if ($this->cache) {
+                        $lastMTime = $this->cache->get($fileAbsolutePath);
+                        $currentMTime = filemtime($fileAbsolutePath);
+                        if ($lastMTime >= $currentMTime) {
+                            continue;
+                        } else {
+                            $this->cache->put($fileAbsolutePath, $currentMTime);
+                        }
+                    }
+                    $filesToParse[] = $fileAbsolutePath;
+                }
+            }
+        }
+        return $filesToParse;
+    }
+
+    /**
+     * Executes PHPMD against PhingFile or a FileSet
+     *
+     * @throws BuildException - if the phpmd classes can't be loaded.
+     */
+    public function main()
+    {
+        $className = $this->loadDependencies();
 
         if (!isset($this->file) and count($this->filesets) == 0) {
             throw new BuildException('Missing either a nested fileset or attribute "file" set');
@@ -254,35 +333,33 @@ class PHPMDTask extends Task
             $reportRenderers[] = $fe->getRenderer();
         }
 
+        if ($this->newVersion && $this->cache) {
+            $reportRenderers[] = new PHPMDRendererRemoveFromCache($this->cache);
+        } else {
+            $this->cache = null; // cache not compatible to old version
+        }
+
         // Create a rule set factory
-        if ($new) {
-            @require_once "PHPMD/RuleSetFactory.php";
+        if ($this->newVersion) {
             $ruleSetClass = '\PHPMD\RuleSetFactory';
-            $ruleSetFactory = new $ruleSetClass(); //php 5.2 parser compatability
+            $ruleSetFactory = new $ruleSetClass(); //php 5.2 parser compatibility
 
         } else {
+            if (!class_exists("PHP_PMD_RuleSetFactory")) {
+                    @include 'PHP/PMD/RuleSetFactory.php';
+            }
             $ruleSetFactory = new PHP_PMD_RuleSetFactory();
-
         }
         $ruleSetFactory->setMinimumPriority($this->minimumPriority);
 
-        $phpmd = new $class_name();
+        /**
+         * @var PHPMD\PHPMD $phpmd
+         */
+        $phpmd = new $className();
         $phpmd->setFileExtensions($this->allowedFileExtensions);
         $phpmd->setIgnorePattern($this->ignorePatterns);
 
-        $filesToParse = array();
-
-        if ($this->file instanceof PhingFile) {
-            $filesToParse[] = $this->file->getPath();
-        } else {
-            // append any files in filesets
-            foreach ($this->filesets as $fs) {
-                foreach ($fs->getDirectoryScanner($this->project)->getIncludedFiles() as $filename) {
-                    $f = new PhingFile($fs->getDir($this->project), $filename);
-                    $filesToParse[] = $f->getAbsolutePath();
-                }
-            }
-        }
+        $filesToParse = $this->getFilesToParse();
 
         if (count($filesToParse) > 0) {
             $inputPath = implode(',', $filesToParse);
@@ -290,6 +367,10 @@ class PHPMDTask extends Task
             $this->log('Processing files...');
 
             $phpmd->processFiles($inputPath, $this->rulesets, $reportRenderers, $ruleSetFactory);
+
+            if ($this->cache) {
+                $this->cache->commit();
+            }
 
             $this->log('Finished processing files');
         } else {

@@ -14,13 +14,7 @@
         echo "... OK"
     fi
     
-    sudo apt-get install python-docutils
-
     if [[ $TRAVIS_PHP_VERSION < 5.3 ]]; then
-    	pear install -f phpunit/File_Iterator-1.3.2
-    	pear install -f phpunit/PHP_TokenStream-1.1.4
-    	pear install -f phpunit/PHP_Timer-1.0.3
-    	pear install -f phpunit/Text_Template-1.1.1
         pear upgrade pecl.php.net/Phar ||
             pear install pecl.php.net/Phar
 
@@ -32,15 +26,6 @@
         # re-test for phpcs:
         phpcs --version 2>&1 >/dev/null   &&
             echo "... OK"
-        echo -e "\nInstalling / upgrading phpcpd ... "
-        which phpcpd >/dev/null                      &&
-            pear upgrade pear.phpunit.de/phpcpd-1.3.5 ||
-            pear install pear.phpunit.de/phpcpd-1.3.5
-
-        echo -e "\nInstalling / upgrading phploc ... "
-        which phploc >/dev/null                      &&
-            pear upgrade pear.phpunit.de/phploc-1.6.4 ||
-            pear install pear.phpunit.de/phploc-1.6.4
             
         echo -e "\nInstalling / upgrading phpdepend ... "
         which pdepend >/dev/null                      &&
@@ -61,7 +46,7 @@
     else
     	echo -e "\nInstalling composer packages ... "
     	composer selfupdate --quiet
-        composer install -o --no-progress
+        composer install -o --no-progress --prefer-dist
     fi
 
     if [[ $TRAVIS_PHP_VERSION != 'hhvm-nightly' && $TRAVIS_PHP_VERSION != 'hhvm' ]]; then

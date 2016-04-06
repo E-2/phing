@@ -17,6 +17,7 @@
  * <http://phing.info>.
  */
 
+require_once 'phing/Diagnostics.php';
 require_once 'phing/Project.php';
 require_once 'phing/ProjectComponent.php';
 require_once 'phing/Target.php';
@@ -39,6 +40,7 @@ include_once 'phing/system/util/Properties.php';
 include_once 'phing/util/StringHelper.php';
 include_once 'phing/system/io/PhingFile.php';
 include_once 'phing/system/io/OutputStream.php';
+include_once 'phing/system/io/PrintStream.php';
 include_once 'phing/system/io/FileOutputStream.php';
 include_once 'phing/system/io/FileReader.php';
 include_once 'phing/system/util/Register.php';
@@ -49,7 +51,7 @@ include_once 'phing/system/util/Register.php';
  * and cleaning up in the end.
  *
  * If you are invoking Phing from an external application, this is still
- * the class to use.  Your applicaiton can invoke the start() method, passing
+ * the class to use.  Your application can invoke the start() method, passing
  * any commandline arguments or additional properties.
  *
  * @author    Andreas Aderhold <andi@binarycloud.com>
@@ -64,6 +66,9 @@ class Phing
 
     /** The default build file name */
     const DEFAULT_BUILD_FILENAME = "build.xml";
+    const PHING_HOME = 'phing.home';
+    const PHP_VERSION = 'php.version';
+    const PHP_INTERPRETER = 'php.interpreter';
 
     /** Our current message output status. Follows Project::MSG_XXX */
     private static $msgOutputLevel = Project::MSG_INFO;
@@ -83,10 +88,23 @@ class Phing
     /** Names of classes to add as listeners to project */
     private $listeners = array();
 
+    /**
+     * keep going mode
+     * @var bool $keepGoingMode
+     */
+    private $keepGoingMode = false;
+
     private $loggerClassname = null;
 
     /** The class to handle input (can be only one). */
     private $inputHandlerClassname;
+
+    /**
+     * Whether or not log output should be reduced to the minimum.
+     *
+     * @var bool $silent
+     */
+    private $silent = false;
 
     /** Indicates if this phing should be run */
     private $readyToRun = false;
@@ -136,6 +154,9 @@ class Phing
      */
     private static $origIniSettings = array();
 
+    /** Whether or not output to the log is to be unadorned. */
+    private $emacsMode = false;
+
     /**
      * Entry point allowing for more options from other front ends.
      *
@@ -157,7 +178,9 @@ class Phing
             $m->execute($args);
         } catch (Exception $exc) {
             self::handleLogfile();
-            throw $exc;
+            self::printMessage($exc);
+            self::statusExit(1);
+            return;
         }
 
         if ($additionalUserProperties !== null) {
@@ -166,15 +189,40 @@ class Phing
             }
         }
 
+        // expect the worst
+        $exitCode = 1;
         try {
-            $m->runBuild();
+            try {
+                $m->runBuild();
+                $exitCode = 0;
+            } catch (ExitStatusException $ese) {
+                $exitCode = $ese->getCode();
+                if ($exitCode != 0) {
+                    self::handleLogfile();
+                    throw $ese;
+                }
+            }
+        } catch (BuildException $exc) {
+            // avoid printing output twice: self::printMessage($exc);
         } catch (Exception $exc) {
-            self::handleLogfile();
-            throw $exc;
-        }
+             echo $exc->getTraceAsString();
+             self::printMessage($exc);
+         }
 
         // everything fine, shutdown
         self::handleLogfile();
+        self::statusExit($exitCode);
+    }
+
+    /**
+     * This operation is expected to call `exit($int)`, which
+     * is what the base version does.
+     * However, it is possible to do something else.
+     * @param int $exitCode code to exit with
+     */
+    protected static function statusExit($exitCode)
+    {
+        exit($exitCode);
     }
 
     /**
@@ -324,6 +372,12 @@ class Phing
             return;
         }
 
+        if (in_array('-diagnostics', $args)) {
+            Diagnostics::doReport(new PrintStream(self::$out));
+
+            return;
+        }
+
         // 2) Next pull out stand-alone args.
         // Note: The order in which these are executed is important (if multiple of these options are specified)
 
@@ -337,6 +391,15 @@ class Phing
             unset($args[$key]);
         }
 
+        if (
+            false !== ($key = array_search('-emacs', $args, true))
+            ||
+            false !== ($key = array_search('-e', $args, true))
+        ) {
+            $this->emacsMode = true;
+            unset($args[$key]);
+        }
+
         if (false !== ($key = array_search('-verbose', $args, true))) {
             self::$msgOutputLevel = Project::MSG_VERBOSE;
             unset($args[$key]);
@@ -344,6 +407,15 @@ class Phing
 
         if (false !== ($key = array_search('-debug', $args, true))) {
             self::$msgOutputLevel = Project::MSG_DEBUG;
+            unset($args[$key]);
+        }
+
+        if (
+            false !== ($key = array_search('-silent', $args, true))
+            ||
+            false !== ($key = array_search('-S', $args, true))
+        ) {
+            $this->silent = true;
             unset($args[$key]);
         }
 
@@ -437,6 +509,8 @@ class Phing
                         $this->setProperty($prop, $value);
                     }
                 }
+            } elseif ($arg == "-keep-going" || $arg == "-k") {
+                $this->keepGoingMode = true;
             } elseif ($arg == "-longtargets") {
                 self::$definedProps->setProperty('phing.showlongtargets', 1);
             } elseif ($arg == "-projecthelp" || $arg == "-targets" || $arg == "-list" || $arg == "-l" || $arg == "-p") {
@@ -583,6 +657,8 @@ class Phing
             $project->fireBuildFinished($exc);
             throw $exc;
         }
+
+        $project->setKeepGoingMode($this->keepGoingMode);
 
         $project->setUserProperty("phing.version", $this->getPhingVersion());
 
@@ -751,7 +827,11 @@ class Phing
      */
     private function createLogger()
     {
-        if ($this->loggerClassname !== null) {
+        if ($this->silent) {
+            require_once 'phing/listener/SilentLogger.php';
+            $logger = new SilentLogger();
+            self::$msgOutputLevel = Project::MSG_WARN;
+        } elseif ($this->loggerClassname !== null) {
             self::import($this->loggerClassname);
             // get class name part
             $classname = self::import($this->loggerClassname);
@@ -766,6 +846,7 @@ class Phing
         $logger->setMessageOutputLevel(self::$msgOutputLevel);
         $logger->setOutputStream(self::$out);
         $logger->setErrorStream(self::$err);
+        $logger->setEmacsMode($this->emacsMode);
 
         return $logger;
     }
@@ -822,7 +903,7 @@ class Phing
     public static function handlePhpError($level, $message, $file, $line)
     {
 
-        // don't want to print supressed errors
+        // don't want to print suppressed errors
         if (error_reporting() > 0) {
 
             if (self::$phpErrorCapture) {
@@ -911,13 +992,19 @@ class Phing
         $msg .= "  -l -list               list available targets in this project" . PHP_EOL;
         $msg .= "  -v -version            print the version information and exit" . PHP_EOL;
         $msg .= "  -q -quiet              be extra quiet" . PHP_EOL;
+        $msg .= "  -S -silent             print nothing but task outputs and build failures" . PHP_EOL;
         $msg .= "  -verbose               be extra verbose" . PHP_EOL;
         $msg .= "  -debug                 print debugging information" . PHP_EOL;
+        $msg .= "  -emacs, -e             produce logging information without adornments" . PHP_EOL;
+        $msg .= "  -diagnostics           print diagnostics information" . PHP_EOL;
         $msg .= "  -longtargets           show target descriptions during build" . PHP_EOL;
         $msg .= "  -logfile <file>        use given file for log" . PHP_EOL;
         $msg .= "  -logger <classname>    the class which is to perform logging" . PHP_EOL;
+        $msg .= "  -listener <classname>  add an instance of class as a project listener" . PHP_EOL;
         $msg .= "  -f -buildfile <file>   use given buildfile" . PHP_EOL;
         $msg .= "  -D<property>=<value>   use value for given property" . PHP_EOL;
+        $msg .= "  -keep-going, -k        execute all targets that do not depend" . PHP_EOL;
+        $msg .= "                         on failed target(s)" . PHP_EOL;
         $msg .= "  -propertyfile <file>   load all properties from file" . PHP_EOL;
         $msg .= "  -find <file>           search for buildfile towards the root of the" . PHP_EOL;
         $msg .= "                         filesystem and use it" . PHP_EOL;
@@ -1246,7 +1333,7 @@ class Phing
         }
 
         // Check for the property phing.home
-        $homeDir = self::getProperty('phing.home');
+        $homeDir = self::getProperty(self::PHING_HOME);
         if ($homeDir) {
             $testPath = $homeDir . DIRECTORY_SEPARATOR . $path;
             if (file_exists($testPath)) {
@@ -1381,9 +1468,14 @@ class Phing
         self::setProperty('line.separator', PHP_EOL);
         self::setProperty('php.version', PHP_VERSION);
         self::setProperty('php.tmpdir', sys_get_temp_dir());
-        self::setProperty('user.home', getenv('HOME'));
+        if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
+            self::setProperty('user.home', getenv('HOME'));
+        } else {
+            self::setProperty('user.home', getenv('HOMEDRIVE') . getenv('HOMEPATH'));
+        }
         self::setProperty('application.startdir', getcwd());
         self::setProperty('phing.startTime', gmdate('D, d M Y H:i:s', time()) . ' GMT');
+        self::setProperty('php.tmpdir', sys_get_temp_dir());
 
         // try to detect machine dependent information
         $sysInfo = array();
@@ -1397,7 +1489,6 @@ class Phing
             $sysInfo['release'] = php_uname('r');
             $sysInfo['version'] = php_uname('v');
         }
-
 
         self::setProperty("host.name", isset($sysInfo['nodename']) ? $sysInfo['nodename'] : "unknown");
         self::setProperty("host.arch", isset($sysInfo['machine']) ? $sysInfo['machine'] : "unknown");

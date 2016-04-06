@@ -92,6 +92,13 @@ class FileSyncTask extends Task
     protected $remoteShell;
 
     /**
+     * Exclude file matching pattern.
+     * Use comma seperated values to exclude multiple files/directories, e.g.: a,b
+     * @var string
+     */
+    protected $exclude;
+
+    /**
      * Excluded patterns file.
      * @var string
      */
@@ -115,6 +122,12 @@ class FileSyncTask extends Task
      * @var string
      */
     protected $defaultOptions = '-rpKzl';
+
+    /**
+     * Command options.
+     * @var string
+     */
+    protected $options;
 
     /**
      * Connection type.
@@ -282,6 +295,12 @@ class FileSyncTask extends Task
         }
         if ($this->backupDir !== null) {
             $options .= ' -b --backup-dir="' . $this->backupDir . '"';
+        }
+
+        if ($this->exclude !== null) {
+            //remove trailing comma if any
+            $this->exclude = trim($this->exclude, ',');
+            $options .= ' --exclude="' . str_replace(',', '" --exclude="', $this->exclude) . '"';
         }
 
         if ($this->excludeFile !== null) {
@@ -536,5 +555,16 @@ class FileSyncTask extends Task
     public function setIdentityFile($identity)
     {
         $this->identityFile = $identity;
+    }
+
+    /**
+     * Sets exclude matching pattern.
+     *
+     * @param string $exclude
+     * @return void
+     */
+    public function setExclude($exclude)
+    {
+        $this->exclude = $exclude;
     }
 }

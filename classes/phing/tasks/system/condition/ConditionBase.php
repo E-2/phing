@@ -59,7 +59,7 @@ abstract class ConditionBase extends ProjectComponent
     }
 
     /**
-     * @return array
+     * @return Condition[]
      */
     public function getConditions()
     {
@@ -109,6 +109,17 @@ abstract class ConditionBase extends ProjectComponent
     }
 
     /**
+     * @return XorCondition
+     */
+    public function createXor()
+    {
+        include_once 'phing/tasks/system/condition/XorCondition.php';
+        $num = array_push($this->conditions, new XorCondition());
+
+        return $this->conditions[$num - 1];
+    }
+
+    /**
      * @return EqualsCondition
      */
     public function createEquals()
@@ -148,6 +159,28 @@ abstract class ConditionBase extends ProjectComponent
     {
         include_once 'phing/tasks/system/condition/IsTrueCondition.php';
         $num = array_push($this->conditions, new IsTrueCondition());
+
+        return $this->conditions[$num - 1];
+    }
+
+    /**
+     * @return IsPropertyFalseCondition
+     */
+    public function createIsPropertyFalse()
+    {
+        include_once 'phing/tasks/system/condition/IsPropertyFalseCondition.php';
+        $num = array_push($this->conditions, new IsPropertyFalseCondition());
+
+        return $this->conditions[$num - 1];
+    }
+
+    /**
+     * @return IsPropertyTrueCondition
+     */
+    public function createIsPropertyTrue()
+    {
+        include_once 'phing/tasks/system/condition/IsPropertyTrueCondition.php';
+        $num = array_push($this->conditions, new IsPropertyTrueCondition());
 
         return $this->conditions[$num - 1];
     }
@@ -197,6 +230,46 @@ abstract class ConditionBase extends ProjectComponent
     {
         include_once 'phing/tasks/system/condition/HttpCondition.php';
         $num = array_push($this->conditions, new HttpCondition());
+
+        return $this->conditions[$num - 1];
+    }
+
+    public function createPhingVersion()
+    {
+        include_once 'phing/tasks/system/condition/PhingVersion.php';
+        $num = array_push($this->conditions, new PhingVersion());
+
+        return $this->conditions[$num - 1];
+    }
+
+    public function createHasFreeSpace()
+    {
+        include_once 'phing/tasks/system/condition/HasFreeSpaceCondition.php';
+        $num = array_push($this->conditions, new HasFreeSpaceCondition());
+
+        return $this->conditions[$num - 1];
+    }
+
+    public function createFilesMatch()
+    {
+        include_once 'phing/tasks/system/condition/FilesMatch.php';
+        $num = array_push($this->conditions, new FilesMatch());
+
+        return $this->conditions[$num - 1];
+    }
+
+    public function createSocket()
+    {
+        include_once 'phing/tasks/system/condition/SocketCondition.php';
+        $num = array_push($this->conditions, new SocketCondition());
+
+        return $this->conditions[$num - 1];
+    }
+
+    public function createIsFailure()
+    {
+        include_once 'phing/tasks/system/condition/IsFailure.php';
+        $num = array_push($this->conditions, new IsFailure());
 
         return $this->conditions[$num - 1];
     }

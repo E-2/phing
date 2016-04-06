@@ -231,6 +231,8 @@ class Win32FileSystem extends FileSystem
      */
     public function normalize($strPath)
     {
+        $strPath = $this->fixEncoding($strPath);
+
         if ($this->_isPharArchive($strPath)) {
             return str_replace('\\', '/', $strPath);
         }
@@ -558,11 +560,11 @@ class Win32FileSystem extends FileSystem
      */
     public function listRoots()
     {
-        $ds = _nativeListRoots();
+        $ds = $this->_nativeListRoots();
         $n = 0;
         for ($i = 0; $i < 26; $i++) {
             if ((($ds >> $i) & 1) !== 0) {
-                if (!$this->access((string) (chr(ord('A') + $i) . ':' . $this->slash))) {
+                if (!$this->_access((string) (chr(ord('A') + $i) . ':' . $this->slash))) {
                     $ds &= ~(1 << $i);
                 } else {
                     $n++;
@@ -571,7 +573,7 @@ class Win32FileSystem extends FileSystem
         }
         $fs = array();
         $j = (int) 0;
-        $slash = (string) $this->slash;
+
         for ($i = 0; $i < 26; $i++) {
             if ((($ds >> $i) & 1) !== 0) {
                 $fs[$j++] = new PhingFile(chr(ord('A') + $i) . ':' . $this->slash);
@@ -586,14 +588,14 @@ class Win32FileSystem extends FileSystem
     /** compares file paths lexicographically
      * @param PhingFile $f1
      * @param PhingFile $f2
-     * @return bool|void
+     * @return int
      */
     public function compare(PhingFile $f1, PhingFile $f2)
     {
         $f1Path = $f1->getPath();
         $f2Path = $f2->getPath();
 
-        return (boolean) strcasecmp((string) $f1Path, (string) $f2Path);
+        return strcasecmp((string) $f1Path, (string) $f2Path);
     }
 
     /**
@@ -618,6 +620,23 @@ class Win32FileSystem extends FileSystem
         @closedir($dir);
 
         return $vv;
+    }
+
+    /**
+     * On Windows platforms, PHP will mangle non-ASCII characters, see http://bugs.php.net/bug.php?id=47096
+     *
+     * @param $strPath
+     * @return mixed|string
+     */
+    private function fixEncoding($strPath)
+    {
+        $codepage = 'Windows-' . trim(strstr(setlocale(LC_CTYPE, 0), '.'), '.');
+        if (function_exists('iconv')) {
+            $strPath = iconv('UTF-8', $codepage . '//IGNORE', $strPath);
+        } elseif (function_exists('mb_convert_encoding')) {
+            $strPath = mb_convert_encoding($strPath, $codepage, 'UTF-8');
+        }
+        return $strPath;
     }
 
 }

@@ -323,7 +323,7 @@ abstract class MatchingTask extends Task implements SelectorContainer
      */
     public function createDate()
     {
-        return $this->fileset->addDate();
+        return $this->fileset->createDate();
     }
 
     /**
@@ -387,6 +387,24 @@ abstract class MatchingTask extends Task implements SelectorContainer
     public function createDepend()
     {
         return $this->fileset->createDepend();
+    }
+
+    /**
+     * add a readable selector entry on the selector list
+     * @return ReadableSelector
+     */
+    public function createReadable()
+    {
+        return $this->fileset->createReadable();
+    }
+
+    /**
+     * add a writable selector entry on the selector list
+     * @return WritableSelector
+     */
+    public function createWritable()
+    {
+        return $this->fileset->createWritable();
     }
 
     /**

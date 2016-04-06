@@ -62,6 +62,13 @@ class PHPCPDTask extends Task
     protected $minTokens = 70;
 
     /**
+     * Allow for fuzzy matches.
+     *
+     * @var boolean
+     */
+    protected $fuzzy = false;
+
+    /**
      * List of valid file extensions for analyzed files.
      *
      * @var array
@@ -88,6 +95,16 @@ class PHPCPDTask extends Task
      * @var PHPCPDFormatterElement[]
      */
     protected $formatters = array();
+
+    /**
+     * @var bool
+     */
+    protected $oldVersion = false;
+
+    /**
+     * @var string
+     */
+    private $pharLocation = "";
 
     /**
      * Set the input source file or directory.
@@ -127,6 +144,16 @@ class PHPCPDTask extends Task
     public function setMinTokens($minTokens)
     {
         $this->minTokens = $minTokens;
+    }
+
+    /**
+     * Sets the fuzzy match (default: false).
+     *
+     * @param boolean $fuzzy fuzzy match
+     */
+    public function setFuzzy($fuzzy)
+    {
+        $this->fuzzy = $fuzzy;
     }
 
     /**
@@ -188,18 +215,43 @@ class PHPCPDTask extends Task
     }
 
     /**
-     * Executes PHPCPD against PhingFile or a FileSet
-     *
-     * @throws BuildException - if the phpcpd classes can't be loaded.
+     * @param string $pharLocation
      */
-    public function main()
+    public function setPharLocation($pharLocation)
     {
+        $this->pharLocation = $pharLocation;
+    }
+
+    /**
+     * @throws BuildException if the phpcpd classes can't be loaded
+     */
+    private function loadDependencies()
+    {
+        if (!empty($this->pharLocation)) {
+            // hack to prevent PHPCPD from starting in CLI mode and halting Phing
+            eval("namespace SebastianBergmann\PHPCPD\CLI;
+class Application
+{
+    public function run() {}
+}");
+
+            ob_start();
+            include $this->pharLocation;
+            ob_end_clean();
+
+            if (class_exists('\\SebastianBergmann\\PHPCPD\\Detector\\Strategy\\DefaultStrategy')) {
+                return;
+            }
+        }
+
         if (class_exists('Composer\\Autoload\\ClassLoader', false) && class_exists(
                 '\\SebastianBergmann\\PHPCPD\\Detector\\Strategy\\DefaultStrategy'
             )
         ) {
-            $oldVersion = false;
-        } elseif ($handler = @fopen('SebastianBergmann/PHPCPD/autoload.php', 'r', true)) {
+            return;
+        }
+
+        if ($handler = @fopen('SebastianBergmann/PHPCPD/autoload.php', 'r', true)) {
             fclose($handler);
             @include_once 'SebastianBergmann/PHPCPD/autoload.php';
 
@@ -207,18 +259,32 @@ class PHPCPDTask extends Task
                 throw new BuildException('The PHPCPD task now requires PHP 5.3+');
             }
 
-            $oldVersion = false;
-        } elseif ($handler = @fopen('PHPCPD/Autoload.php', 'r', true)) {
+            return;
+        }
+
+        if ($handler = @fopen('PHPCPD/Autoload.php', 'r', true)) {
             fclose($handler);
             @include_once 'PHPCPD/Autoload.php';
 
-            $oldVersion = true;
-        } else {
-            throw new BuildException(
-                'PHPCPDTask depends on PHPCPD being installed and on include_path.',
-                $this->getLocation()
-            );
+            $this->oldVersion = true;
+
+            return;
         }
+
+        throw new BuildException(
+            'PHPCPDTask depends on PHPCPD being installed and on include_path.',
+            $this->getLocation()
+        );
+    }
+
+    /**
+     * Executes PHPCPD against PhingFile or a FileSet
+     *
+     * @throws BuildException
+     */
+    public function main()
+    {
+        $this->loadDependencies();
 
         if (!isset($this->file) && count($this->filesets) == 0) {
             throw new BuildException('Missing either a nested fileset or attribute "file" set');
@@ -253,7 +319,7 @@ class PHPCPDTask extends Task
 
         $this->log('Processing files...');
 
-        if ($oldVersion) {
+        if ($this->oldVersion) {
             $detectorClass = 'PHPCPD_Detector';
             $strategyClass = 'PHPCPD_Detector_Strategy_Default';
         } else {
@@ -265,7 +331,8 @@ class PHPCPDTask extends Task
         $clones = $detector->copyPasteDetection(
             $filesToParse,
             $this->minLines,
-            $this->minTokens
+            $this->minTokens,
+            $this->fuzzy
         );
 
         $this->log('Finished copy/paste detection');

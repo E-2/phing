@@ -64,7 +64,7 @@ class SmartyTask extends Task
     protected $controlTemplate;
 
     /**
-     * This is where Velocity will look for templates
+     * This is where Smarty will look for templates
      * using the file template loader.
      * @var string
      */
@@ -196,7 +196,7 @@ class SmartyTask extends Task
     }
 
     /**
-     * [REQUIRED] Set the path where Velocity will look
+     * [REQUIRED] Set the path where Smarty will look
      * for templates using the file template
      * loader.
      * @param $templatePath
@@ -225,7 +225,7 @@ class SmartyTask extends Task
     }
 
     /**
-     * Get the path where Velocity will look
+     * Get the path where Smarty will look
      * for templates using the file template
      * loader.
      * @return string
@@ -309,7 +309,7 @@ class SmartyTask extends Task
     }
 
     /**
-     * Set whether Smarty should always recompile tempaltes.
+     * Set whether Smarty should always recompile templates.
      * @param  boolean $force
      * @return void
      */
@@ -462,11 +462,11 @@ class SmartyTask extends Task
     }
 
     /**
-     * Execute the input script with Velocity
+     * Execute the input script with Smarty
      *
      * @throws BuildException
      *                        BuildExceptions are thrown when required attributes are missing.
-     *                        Exceptions thrown by Velocity are rethrown as BuildExceptions.
+     *                        Exceptions thrown by Smarty are rethrown as BuildExceptions.
      */
     public function main()
     {
@@ -494,7 +494,7 @@ class SmartyTask extends Task
         // Setup Smarty runtime.
 
         // Smarty uses one object to store properties and to store
-        // the context for the template (unlike Velocity).  We setup this object, calling it
+        // the context for the template (unlike Smarty).  We setup this object, calling it
         // $this->context, and then initControlContext simply zeros out
         // any assigned variables.
         //
@@ -584,7 +584,7 @@ class SmartyTask extends Task
                     $property = substr($property, 0, strpos($property, "file.contents") - 1);
 
                     // reset value, and then
-                    // read in teh contents of the file into that var
+                    // read in the contents of the file into that var
                     $value = "";
                     $f = new PhingFile($this->project->resolveFile($value)->getCanonicalPath());
                     if ($f->exists()) {
